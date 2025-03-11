@@ -20,7 +20,7 @@ jobs:
         uses: docker/setup-buildx-action@v2
       - name: Build
         run: |
-          docker buildx build --platform linux/amd64,linux/arm64 -f docker/Dockerfile.build --output type=local,dest=out/ .
+          docker buildx build --platform linux/amd64,linux/arm64 -f docker/Dockerfile.build --output type=local,dest=out/ ./hailort/
           for filename in out/**/*.tar.gz out/**/*.whl; do
             [ -e "$filename" ] || continue
             gh release upload ${{github.event.release.tag_name}} "$filename"
