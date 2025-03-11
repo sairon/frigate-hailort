@@ -28,6 +28,7 @@ jobs:
       - name: Upload release artifacts
         if: ${{ github.event_name == 'release' }}
         run: |
+          shopt -s globstar
           for filename in out/**/*.tar.gz out/**/*.whl; do
             [ -e "$filename" ] || continue
             gh release upload ${{github.event.release.tag_name}} "$filename"
