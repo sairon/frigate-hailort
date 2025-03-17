@@ -52,41 +52,6 @@ RUN wget -q https://bootstrap.pypa.io/get-pip.py -O get-pip.py \
 RUN cd /source/hailort/libhailort/bindings/python/platform && \
     python3 setup.py bdist_wheel --dist-dir /wheels
 
-FROM hailort AS py311-wheels
-ARG DEBIAN_FRONTEND=noninteractive
-ARG PYTHON_VERSION=3.11.11
-
-RUN apt-get -qq update \
-    && apt-get -qq install -y \
-    zlib1g-dev \
-    libncurses5-dev \
-    libgdbm-dev \ 
-    libnss3-dev \
-    libssl-dev \
-    libreadline-dev \
-    libffi-dev \
-    libsqlite3-dev \
-    libbz2-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN cd /usr/src \
-    && wget https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tgz \
-    && tar -xzf Python-${PYTHON_VERSION}.tgz \
-    && cd Python-${PYTHON_VERSION} \
-    && ./configure --enable-optimizations \
-    && make altinstall
-
-# Ensure python3 defaults to python3.11
-RUN update-alternatives --install /usr/bin/python3 python3 /usr/local/bin/python3.11 1
-
-RUN wget -q https://bootstrap.pypa.io/get-pip.py -O get-pip.py \
-    && python3 get-pip.py "pip"
-
-# Create a wheel file using pip3 wheel
-RUN cd /source/hailort/libhailort/bindings/python/platform && \
-    python3 setup.py bdist_wheel --dist-dir /wheels
-
 FROM scratch AS package
 COPY --from=hailort /package /
 COPY --from=py39-wheels /wheels /
-COPY --from=py311-wheels /wheels /
