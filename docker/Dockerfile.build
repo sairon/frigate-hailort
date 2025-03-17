@@ -1,20 +1,15 @@
-FROM debian:11 AS hailort
+ARG DEBIAN_VERSION=12
+FROM debian:${DEBIAN_VERSION} AS hailort
 ARG DEBIAN_FRONTEND=noninteractive
 ARG TARGETARCH
+ARG DEBIAN_VERSION
 
 RUN apt-get -qq update \
     && apt-get -qq install -y \
-    apt-transport-https \
-    gnupg \
+    build-essential \
+    cmake \
+    git \
     wget \
-    # the key fingerprint can be obtained from https://ftp-master.debian.org/keys.html
-    && wget -qO- "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xA4285295FC7B1A81600062A9605C66F00D6C9793" | \
-    gpg --dearmor > /usr/share/keyrings/debian-archive-bullseye-stable.gpg \
-    && echo "deb [signed-by=/usr/share/keyrings/debian-archive-bullseye-stable.gpg] http://deb.debian.org/debian bullseye main contrib non-free" | \
-    tee /etc/apt/sources.list.d/debian-bullseye-nonfree.list \
-    && apt-get -qq update \
-    && apt-get -qq install -y \
-    build-essential cmake git \
     && rm -rf /var/lib/apt/lists/*
 
 COPY . /source
@@ -30,23 +25,18 @@ RUN cd /source && \
 RUN mkdir -p /rootfs/usr/local/lib /rootfs/usr/local/bin /package && \
     cp /usr/local/lib/libhailort.so* /rootfs/usr/local/lib && \
     cp /usr/local/bin/hailortcli /rootfs/usr/local/bin && \
-    tar -czf /package/hailort-${TARGETARCH}.tar.gz /rootfs
+    tar -czf /package/hailort-debian${DEBIAN_VERSION}-${TARGETARCH}.tar.gz /rootfs
 
-FROM hailort AS py39-wheels
+FROM hailort AS wheels
 ARG DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get -qq update \
     && apt-get -qq install -y \
-    python3.9 \
-    python3.9-dev \
-    python3.9-distutils \
+    python3 \
+    python3-dev \
+    python3-distutils \
+    python3-pip \
     && rm -rf /var/lib/apt/lists/*
-
-# Ensure python3 defaults to python3.9
-RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.9 1
-
-RUN wget -q https://bootstrap.pypa.io/get-pip.py -O get-pip.py \
-    && python3 get-pip.py "pip"
 
 # Create a wheel file using pip3 wheel
 RUN cd /source/hailort/libhailort/bindings/python/platform && \
@@ -54,4 +44,4 @@ RUN cd /source/hailort/libhailort/bindings/python/platform && \
 
 FROM scratch AS package
 COPY --from=hailort /package /
-COPY --from=py39-wheels /wheels /
+COPY --from=wheels /wheels /
